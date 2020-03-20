@@ -2,15 +2,15 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Button, FlatList } from 'react-native';
 
-import GmInfiniteScrollItem from '../components/GmInfiniteScrollItem';
-
 const GmInfiniteScroll = ({ navigation }) => {
 
   const [values, setValues] = useState({
     first: true, // first time component is loading?
-    voters: []
+    voters: [],
+    refreshing: false
   });
-  const [gmId, setGmId] = useState(props.gm_id)
+  const gm_id = navigation.getParam("gm_id");
+  const token = navigation.getParam("token");
 
   useEffect(() => {
     if (values.first == true) { // page is rendering for first time
@@ -21,21 +21,12 @@ const GmInfiniteScroll = ({ navigation }) => {
     }
   }, [values]);
 
-  const getResponses = async () => {
-    let token;
-    try {
-      token = await AsyncStorage.getItem("token");
-    }
-    catch (error) {
-      console.log('AsyncStorage Error: ' + error.message);
-      setError("Unable to access page. Please try logging in again.");
-    }
+  const getResponses = () => {
 
     if (token) {
       const start = -1; // will be read by back end as start at 0 and no limit
-      const gm_id = gmId; // "4382194314"
 
-      fetch("https://readoutconsult.com/getvotersgm", {
+      fetch("http://localhost:3000/getvotersgm", {
         method: "POST",
         headers: {
           'Accept': 'application/json',
@@ -45,39 +36,62 @@ const GmInfiniteScroll = ({ navigation }) => {
       })
       .then((res) => res.json())
       .then((json) => {
-        console.log("json : ", json);
+        console.log("json.voters[0] : ", json.voters[0]);
         const voters = json.voters || [];
-        setValues({ ...values, first: false, voters });
+        setValues({ ...values, first: false, refreshing: false, voters });
       })
+      .catch((err) => {
+        console.log("Err : ", err);
+        setValues({ ...values, refreshing: false });
+      });
     }
   }
 
-  const handleInitiate = () => {
-    console.log("handle Initiate");
+  const handleRefresh = () => {
+    setValues({ ...values, refreshing: true }, () => getResponses());
   }
 
+  if (values.first) {
+    return <Text>Loading...</Text>
+  }
+
+  else {
     return (
       <View>
-        <Text>Your Conversations</Text>
-        <TouchableOpacity><Button onPress={ handleInitiate } title="Initiate Mode" /></TouchableOpacity>
-        <Text>Press button to enter Initiate Mode</Text>
+        <TouchableOpacity>
+          <Button onPress={ () => navigation.navigate("GmInitiatePage", { gm_id, token })} title="Initiate Mode"/>
+        </TouchableOpacity>
+        <Text>Press the button above to quickly cycle through your list to populate and send your first outgoing message.</Text>
+        <Text>Or tap a name below to open the conversation.</Text>
         <FlatList
-          data={voters}
-          renderItem={({ voter }) => (
-            <GmInfiniteScrollItem gm_id={ gmId } key={ voter["Voter File VANID"] } voter={ voter } />
-          )}
+          keyExtractor={ (item, key) => "v" + item["Voter File VANID"] }
+          data={values.voters}
+          renderItem={({ item }) => {
+            const gm_index = item.gms.findIndex((el) => gm_id == el.gm_id);
+            return (
+              <TouchableOpacity onPress={ () => navigation.navigate("GmConversation", { gm_id, voter: item, token }) }>
+                <Text>{ item.gms[gm_index].messages.length ? item.gms[gm_index].messages[0].read ? "" : "Blue dot" : "" }</Text>
+                <Text>{ item.FirstName + " " + voter.LastName }</Text>
+                <Text>{ item.gms[gm_index].messages.length ? item.gms[gm_index].messages[0].content.slice(0, 20) : "Tap to initiate conversation" }</Text>
+                <Text>{ item.date_of_last_message }</Text>
+              </TouchableOpacity>
+            )
+          })}
+          refreshing={ values.refreshing }
+          onRefresh={ handleRefresh }
         />
       </View>
     );
   }
+}
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#fff',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 export default GmInfiniteScroll;

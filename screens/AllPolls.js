@@ -8,6 +8,7 @@ const AllPolls = ({ navigation }) => {
   const [polls, setPolls] = useState([]);
   const [gms, setGms] = useState([]);
   const [token, setToken] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (first == true) {
@@ -20,22 +21,22 @@ const AllPolls = ({ navigation }) => {
   }, [polls]);
 
   const populate = async () => {
-    let token;
+    let t;
     try {
-      token = await AsyncStorage.getItem("token");
+      t = await AsyncStorage.getItem("token");
     }
     catch (e) {
       console.log('AsyncStorage Error: ' + e.message);
     }
 
-    if (token) {
+    if (t) {
       fetch("http://localhost:3000/allpolls", {
         method: "POST",
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ token })
+        body: JSON.stringify({ token: t })
       })
       .then((res) => res.json())
       .then((json) => {
@@ -45,15 +46,21 @@ const AllPolls = ({ navigation }) => {
         setGms(gms);
         setToken(token);
         setFirst(false);
+        setRefreshing(false);
       })
       .catch((err) => {
-        console.log("err : ", err)
+        console.log("err : ", err);
+        setRefreshing(false);
       });
     }
   }
 
+  const handleRefresh = () => {
+    setValues({ ...values, refreshing: true }, () => populate());
+  }
+
   if (first) {
-    return <View><Text>Loading still...</Text></View>
+    return <View><Text>Loading...</Text></View>
   }
 
   else {
@@ -65,7 +72,7 @@ const AllPolls = ({ navigation }) => {
           keyExtractor={ (item, key) => item.poll_id }
           data={polls}
           renderItem={({ item }) => (
-            <TouchableOpacity onPress={ () => navigation.navigate("PollInfiniteScroll", { poll_id: item.poll_id, token })}>
+            <TouchableOpacity key={ item.poll_id } onPress={ () => navigation.navigate("PollInfiniteScroll", { poll_id: item.poll_id, token })}>
               <Text>{ item.orgname }</Text>
               <Text>Start date: { item.poll_start }</Text>
             </TouchableOpacity>
@@ -81,6 +88,8 @@ const AllPolls = ({ navigation }) => {
               <Text>Start date: { item.gm_start }</Text>
             </TouchableOpacity>
           )}
+          refreshing={ refreshing }
+          onRefresh={ handleRefresh }
         />
       </View>
     )}

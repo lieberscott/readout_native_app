@@ -6,7 +6,8 @@ const PollInfiniteScroll = ({ navigation }) => {
 
   const [values, setValues] = useState({
     first: true, // first time component is loading?
-    voters: []
+    voters: [],
+    refreshing: false
   });
   const token = navigation.getParam("token");
   const poll_id = navigation.getParam("poll_id");
@@ -20,13 +21,9 @@ const PollInfiniteScroll = ({ navigation }) => {
     }
   }, [values]);
 
-  const getResponses = async () => {
-    console.log("get responses");
-    console.log("token : ", token);
-    console.log("poll_id : ", poll_id);
+  const getResponses = () => {
 
     if (token) {
-
       let start = -1; // will be read by back end as start at 0 and no limit
 
       fetch("http://localhost:3000/getvoters", {
@@ -41,12 +38,17 @@ const PollInfiniteScroll = ({ navigation }) => {
       .then((json) => {
         console.log("json : ", json);
         let voters = json.voters || [];
-        setValues({ ...values, first: false, voters });
+        setValues({ ...values, first: false, refreshing: false, voters });
       })
       .catch((err) => {
         console.log("Err : ", err);
+        setValues({ ...values, refreshing: false });
       });
     }
+  }
+
+  const handleRefresh = () => {
+    setValues({ ...values, refreshing: true }, () => getResponses());
   }
 
   if (values.first) {
@@ -75,6 +77,8 @@ const PollInfiniteScroll = ({ navigation }) => {
               </TouchableOpacity>
             )}
           }
+          refreshing={ values.refreshing }
+          onRefresh={ handleRefresh }
         />
       </View>
     );

@@ -9,6 +9,7 @@ import GmInfiniteScroll from '../screens/GmInfiniteScroll';
 import GmInitiatePage from '../screens/GmInitiatePage';
 import GmConversation from '../screens/GmConversation';
 
+
 const screens = {
   AllPolls: {
     screen: AllPolls

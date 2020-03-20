@@ -4,14 +4,15 @@ import { StyleSheet, Text, View, Button } from 'react-native';
 
 import GmInitiateConversation from '../components/GmInitiateConversation';
 
-const GmInitiatePage = (props) => {
+const GmInitiatePage = ({ navigation }) => {
 
   const [values, setValues] = useState({
     first: true, // first time component is loading?
     voters: []
   });
-  const [gmId, setGmId] = useState(props.location.state ? props.location.state.gm_id : "");
   const [i, setI] = useState(0);
+  const gm_id = navigation.getParam("gm_id");
+  const token = navigation.getParam("token");
 
   useEffect(() => {
     if (values.first == true) { // page is rendering for first time
@@ -24,11 +25,8 @@ const GmInitiatePage = (props) => {
 
   const getVoters = () => {
     console.log("get uninitiated voters");
-    const token = localStorage.getItem("token");
-    const gm_id = gmId;
-    console.log("gmId : ", gmId);
 
-    fetch("https://readoutconsult.com/getvotersinitiategm", { // only voters for whom there is no messages, 1000 at a time
+    fetch("http://localhost:3000/getvotersinitiategm", { // only voters for whom there is no messages, 1000 at a time
       method: "POST",
       headers: {
         'Accept': 'application/json',
@@ -63,13 +61,14 @@ const GmInitiatePage = (props) => {
   else {
     console.log("values.voters[i] : ", values.voters[i]);
     return (
-      <Text>
+      <View>
         <GmInitiateConversation
-          gm_id={ gmId }
+          gm_id={ gm_id }
           voter={ values.voters[i] }
           increment={ () => increment() }
+          token={ token }
         />
-      </Text>
+      </View>
     );
   }
 }

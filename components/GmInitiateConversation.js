@@ -1,20 +1,20 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Button } from 'react-native';
+import { StyleSheet, Text, View, Button, FlatList } from 'react-native';
 
 const GmInitiateConversation = (props) => {
 
   // const [first, setFirst] = useState(true);
   const [convo, setConvo] = useState([]);
-  const [cell, setCell] = useState("");
   const [text, setText] = useState("");
-  const [voterId, setVoterId] = useState("");
-  const [gmId, setGmId] = useState("");
+
+  const voter = props.voter;
+  const voter_id = voter["Voter File VANID"];
+  const gm_id = props.gm_id;
+  const cell = voter["Cell Phone"];
+  const token = props.token;
 
   useEffect(() => {
-    setCell(props.voter["Cell Phone"]);
-    setVoterId(props.voter["Voter File VANID"]);
-    setGmId(props.gm_id);
     setText("");
   }, [props])
 
@@ -26,11 +26,7 @@ const GmInitiateConversation = (props) => {
   const handleInitiate = (e) => {
     e.persist();
 
-    const token = localStorage.getItem("token");
-    const voter_id = voterId;
-    const gm_id = gmId;
-
-    fetch("https://readoutconsult.com/initiatemessagegm", {
+    fetch("http://localhost:3000/initiatemessagegm", {
       method: "POST",
       headers: {
         'Accept': 'application/json',
@@ -56,19 +52,17 @@ const GmInitiateConversation = (props) => {
 
   const handleSend = (e) => {
     e.persist();
-    const token = localStorage.getItem("token");
     const t = text;
-    const gm_id = gmId;
     const text_to = cell;
     setText("");
 
-    fetch("https://readoutconsult.com/sendmessagegm", {
+    fetch("http://localhost:3000/sendmessagegm", {
       method: "POST",
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ token, text: t, voter_id: voterId, gm_id, text_to })
+      body: JSON.stringify({ token, text: t, voter_id, gm_id, text_to })
     })
     .then((res) => res.json())
     .then((json) => {
@@ -84,17 +78,27 @@ const GmInitiateConversation = (props) => {
 
   return (
     <View>
-      <Text>{ props.voter.FirstName } { props.voter.LastName }</Text>
-      <Text>{ props.voter["Cell Phone"] }</Text>
-      { convo.length ? convo.map((c, i) => {
-        return (
-          <View>
-            <Text>{c.content}</Text>
-          </View>
-        )
-      }) : <div><Button onClick={ handleInitiate }>Initiate</Button><div>Press initiate, then Send, to initiate conversation</div></div> }
-      <Input type="textarea" name="text" onChange={ handleChange } value={ text || "" }  />
-      <Button onClick={ handleSend }>Send</Button>
+      <Text>{ voter.FirstName } { voter.LastName }</Text>
+      <Text>{ cell }</Text>
+      <FlatList
+        keyExtractor={ (item, key) => "msg" + key }
+        data={convo}
+        renderItem={({ item }) => <Text>{ item.content }</Text> }
+      />
+      <TouchableOpacity>
+        <Button onPress={ handleInitiate } title="Initiate" />
+      </TouchableOpacity>
+      <Text>Press Initiate, then Send, to initiate conversation</Text>
+      <TextInput
+        multiline={ true }
+        numberOfLines={ 2 }
+        borderBottomColor="black"
+        borderBottomWidth={ 1 }
+        name="text"
+        onChangeText={ handleChange }
+        value={ text || "" }
+        />
+      <Button onPress={ handleSend } title="Send" />
     </View>
   )
 };
